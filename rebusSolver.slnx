@@ -1,0 +1,7 @@
+<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Project Path="rebusSolver/rebusSolver.vcxproj" Id="b1c750e1-d9c3-47dd-9b67-d8ba5d97ef26" />
+</Solution>
