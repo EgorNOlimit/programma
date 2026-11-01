@@ -3,6 +3,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <time.h>
+#include <windows.h>
 
 #define MAX_LENGTH 256
 #define MAX_WORDS 8 // 7 слогаемых + результат
@@ -192,6 +193,97 @@ int search(int pos)
 }
 
 
+// функция, выполняющая сложение по столбцам
+
+int search_columns(int column, int row, int sum)
+{
+    int max_len = (int)strlen(words[word_count - 1]);
+
+    // Все столбцы обработаны
+    if (column == max_len)
+        return sum == 0;
+
+    // Обрабатываем все слагаемые текущего столбца
+    if (row < word_count - 1)
+    {
+        int len = (int)strlen(words[row]);
+
+        // Если слово короче текущего столбца
+        if (column >= len)
+            return search_columns(column, row + 1, sum);
+
+        char c = words[row][len - 1 - column];
+        int index = c - 'A';
+
+        // Если цифра уже назначена
+        if (digits[index] != -1)
+            return search_columns(column, row + 1,
+                sum + digits[index]);
+
+        // Перебираем цифры для новой буквы
+        for (int d = 0; d <= 9; d++)
+        {
+            if (used_digits[d])
+                continue;
+
+            if (d == 0 && leading[index])
+                continue;
+
+            digits[index] = d;
+            used_digits[d] = 1;
+
+            if (search_columns(column, row + 1, sum + d))
+                return 1;
+
+            digits[index] = -1;
+            used_digits[d] = 0;
+        }
+
+        return 0;
+    }
+
+    // Все слагаемые столбца обработаны
+    // Проверяем цифру результата
+    int len = (int)strlen(words[word_count - 1]);
+
+    char c = words[word_count - 1][len - 1 - column];
+    int index = c - 'A';
+
+    int expected = sum % 10;
+    int carry = sum / 10;
+
+    // Если цифра результата уже назначена
+    if (digits[index] != -1)
+    {
+        if (digits[index] != expected)
+            return 0;
+
+        return search_columns(column + 1, 0, carry);
+    }
+
+    // Если нужная цифра занята
+    if (used_digits[expected])
+        return 0;
+
+    // Проверяем ведущий ноль
+    if (expected == 0 && leading[index])
+        return 0;
+
+    digits[index] = expected;
+    used_digits[expected] = 1;
+
+    if (search_columns(column + 1, 0, carry))
+        return 1;
+
+    digits[index] = -1;
+    used_digits[expected] = 0;
+
+    return 0;
+}
+
+
+
+
 void print_solution(void)
 {
     printf("\nSolution:\n");
@@ -227,11 +319,25 @@ int main(void)
         return 1;
     }
 
-    clock_t start = clock();
+    //
+    LARGE_INTEGER frequency;
+    LARGE_INTEGER start;
+    LARGE_INTEGER end;
 
-    int found = search(0);
+    QueryPerformanceFrequency(&frequency);
 
-    clock_t end = clock();
+    QueryPerformanceCounter(&start);
+    //
+
+    int found = search_columns(0, 0, 0);
+
+    //
+    QueryPerformanceCounter(&end);
+
+    double elapsed =
+        (double)(end.QuadPart - start.QuadPart) /
+        (double)frequency.QuadPart;
+    //
 
     if (found)
     {
@@ -241,8 +347,6 @@ int main(void)
     {
         printf("No solution found.\n");
     }
-
-    double elapsed = (double)(end - start) / CLOCKS_PER_SEC;
 
     printf("Execution time: %.6f seconds\n", elapsed);
 
