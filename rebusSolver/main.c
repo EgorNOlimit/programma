@@ -146,14 +146,16 @@ long long calculate(const char* word)
 
 int check_solution(void)
 {
+    long long result = calculate(words[word_count - 1]);
     long long sum = 0;
 
     for (int i = 0; i < word_count - 1; i++)
     {
         sum += calculate(words[i]);
-    }
 
-    long long result = calculate(words[word_count - 1]);
+        if (sum > result)
+            return 0;
+    }
 
     return sum == result;
 }
