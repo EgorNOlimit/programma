@@ -4,6 +4,7 @@
 #include <ctype.h>
 #include <time.h>
 #include <windows.h>
+#include <limits.h>
 
 #define MAX_LENGTH 256
 #define MAX_WORDS 8 // 7 слогаемых + результат
@@ -33,6 +34,8 @@ int leading[26];
 // Найдено ли решение
 int solution_found = 0;
 
+//Хранение арифметической операции,введённой пользователем
+char operation = '+';
 
 
 void initialize(void)
@@ -97,10 +100,19 @@ int parser(void)
                 }
             }
         }
-        else if (c == '+' || c == '=')
+        else if (c == '+' || c == '-' ||
+            c == '*' || c == '/' || c == '=')
         {
             if (pos == 0)
                 return 0;
+
+            if (c != '=')
+            {
+                if (operation != '+' && operation != c)
+                    return 0;
+
+                operation = c;
+            }
 
             words[word_count][pos] = '\0';
 
@@ -109,10 +121,6 @@ int parser(void)
 
             word_count++;
             pos = 0;
-        }
-        else if (c != ' ')
-        {
-            return 0;
         }
     }
 
@@ -293,12 +301,69 @@ void print_solution(void)
         printf("%lld", calculate(words[i]));
 
         if (i < word_count - 2)
-            printf(" + ");
+            printf(" %c ", operation);
         else if (i == word_count - 2)
             printf(" = ");
     }
-
+        
     printf("\n");
+}
+
+
+
+int check_other_operation(void)
+{
+    long long a = calculate(words[0]);
+    long long b = calculate(words[1]);
+    long long result = calculate(words[2]);
+
+    switch (operation)
+    {
+    case '-':
+        return a - b == result;
+
+    case '*':
+        if (a != 0 && b > LLONG_MAX / a)
+            return 0;
+        return a * b == result;
+
+    case '/':
+        if (b == 0)
+            return 0;
+        return a / b == result && a % b == 0;
+
+    default:
+        return 0;
+    }
+}
+
+
+int search_other(int pos)
+{
+    if (pos == letter_count)
+        return check_other_operation();
+
+    int index = letters[pos] - 'A';
+
+    for (int d = 0; d <= 9; d++)
+    {
+        if (used_digits[d])
+            continue;
+
+        if (d == 0 && leading[index])
+            continue;
+
+        digits[index] = d;
+        used_digits[d] = 1;
+
+        if (search_other(pos + 1))
+            return 1;
+
+        digits[index] = -1;
+        used_digits[d] = 0;
+    }
+
+    return 0;
 }
 
 
@@ -329,7 +394,12 @@ int main(void)
     QueryPerformanceCounter(&start);
     //
 
-    int found = search_columns(0, 0, 0);
+    int found;
+
+    if (operation == '+')
+        found = search_columns(0, 0, 0);
+    else
+        found = search_other(0);
 
     //
     QueryPerformanceCounter(&end);
