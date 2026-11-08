@@ -37,6 +37,9 @@ int solution_found = 0;
 //Хранение арифметической операции,введённой пользователем
 char operation = '+';
 
+//счетчик узлов
+unsigned long long recursive_calls = 0;
+
 
 void initialize(void)
 {
@@ -201,10 +204,57 @@ int search(int pos)
 }
 
 
+
+
+//функция эвристики:
+
+
+int apply_heuristic(void)
+{
+    if (operation != '+')
+        return 1;
+
+    int result_len = (int)strlen(words[word_count - 1]);
+    int max_operand_len = 0;
+
+    for (int i = 0; i < word_count - 1; i++)
+    {
+        int len = (int)strlen(words[i]);
+
+        if (len > max_operand_len)
+            max_operand_len = len;
+    }
+
+    // Два слагаемых одинаковой максимальной длины,
+    // результат длиннее на один разряд.
+    if (word_count == 3 &&
+        result_len == max_operand_len + 1 &&
+        strlen(words[0]) == strlen(words[1]))
+    {
+        int index = words[word_count - 1][0] - 'A';
+
+        // Ведущая цифра результата обязательно равна 1.
+        if (digits[index] != -1)
+            return digits[index] == 1;
+
+        if (used_digits[1])
+            return 0;
+
+        digits[index] = 1;
+        used_digits[1] = 1;
+    }
+
+    return 1;
+}
+
+
+
+
 // функция, выполняющая сложение по столбцам
 
 int search_columns(int column, int row, int sum)
 {
+    recursive_calls++;
     int max_len = (int)strlen(words[word_count - 1]);
 
     // Все столбцы обработаны
@@ -227,6 +277,8 @@ int search_columns(int column, int row, int sum)
         if (digits[index] != -1)
             return search_columns(column, row + 1,
                 sum + digits[index]);
+
+
 
         // Перебираем цифры для новой буквы
         for (int d = 0; d <= 9; d++)
@@ -397,9 +449,17 @@ int main(void)
     int found;
 
     if (operation == '+')
-        found = search_columns(0, 0, 0);
+    {
+        if (apply_heuristic())
+            found = search_columns(0, 0, 0);
+        else
+            found = 0;
+    }
     else
+    {
         found = search_other(0);
+    }
+
 
     //
     QueryPerformanceCounter(&end);
@@ -419,7 +479,7 @@ int main(void)
     }
 
     printf("Execution time: %.6f seconds\n", elapsed);
-
+    printf("Recursive calls: %llu\n", recursive_calls);
     return 0;
 }
 
